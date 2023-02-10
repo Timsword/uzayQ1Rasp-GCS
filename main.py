@@ -1,13 +1,21 @@
 import gui
 from pymavlink import mavutil
+from dronekit import connect, VehicleMode, LocationGlobalRelative
 
 def ihayaBaglan():
     # ihaya bağlan
     iha = mavutil.mavlink_connection('COM9', baud=57600)  # com port değiştirilebilir
-    print(2)
+    print("Bağlantı stringi oluşturuldu.")
     # cevap bekle
     iha.wait_heartbeat()
-    print(3)
+    print("İletişim sağlandı.")
     return iha
-#ihayaBaglan()
+def ihayaBaglanWithDronekit():
+    # Connect to Pixhawk using the default connection string
+    iha = connect('COM9', baud=57600, wait_ready=True)
+    print("Bağlantı stringi oluşturuldu.")
+    return iha
+
+# ihayaBaglan()
+# ihayaBaglanWithDronekit()
 gui.initializeGui(2)
