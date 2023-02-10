@@ -5,6 +5,7 @@ import time
 from pymavlink import mavutil
 import serial
 from dronekit import VehicleMode, LocationGlobalRelative, Command
+import math
 
 # parameters
 speed = 0
@@ -12,7 +13,10 @@ altitude = 0
 latitude = 0
 longitude = 0
 coordList = []
-uzunlukSabiti = 0.00001 # 1.1 metre
+uzunlukSabiti = 0.00001  # 1.1 metre
+
+yerHizi=1
+yawRate=15
 
 
 def retrieve_telemetry(iha):
@@ -75,9 +79,43 @@ def initializeGui(iha):
         # time.sleep(1)
         # komut.clear()
         print("2")
-
+    def hizBelirle(iha, vx, vy, vz, yaw):
+        msg = iha.message_factory.set_position_target_local_ned_encode(
+            0,
+            0, 0,
+            mavutil.mavlink.MAV_FRAME_BODY_NED,
+            0b0000111111000111,  # -- BITMASK -> Consider only the velocities
+            0, 0, 0,  # -- POSITION
+            vx, vy, vz,  # -- VELOCITY
+            0, 0, 0,  # -- ACCELERATIONS
+            0, math.radians(yaw))
+        iha.send_mavlink(msg)
+        iha.flush()
     #komut = iha.commands
 
+    def key(event):
+        if event.char == event.keysym:  # -- standard keys
+            if event.keysym == 'r':
+                print("r pressed >> Set the vehicle to RTL")
+                iha.mode = VehicleMode("RTL")
+
+        else:  # -- non standard keys
+            if event.keysym == 'W':  # ileri
+                hizBelirle(iha, yerHizi, 0, 0, 0)
+            elif event.keysym == 'S':  # geri
+                hizBelirle(iha, -yerHizi, 0, 0, 0)
+            elif event.keysym == 'A':  # sola
+                hizBelirle(iha, 0, -yerHizi, 0, 0)
+            elif event.keysym == 'D':  #sağa
+                hizBelirle(iha, 0, yerHizi, 0, 0)
+            elif event.keysym == 'Q':  # sola dön
+                hizBelirle(iha, 0, 0, 0, -yawRate)
+            elif event.keysym == 'R':  # sağa dön
+                hizBelirle(iha, 0, 0, 0, yawRate)
+            elif event.keysym == 'Up':  # yüksel
+                hizBelirle(iha, 0, 0, yerHizi, 0)
+            elif event.keysym == 'Down':  # alçal
+                hizBelirle(iha, 0, 0, -yerHizi, 0)
     root = Tk()
     root.title('KTUUZAYQ1 Yer İstasyonu')
     #root.geometry("1200x900")
@@ -158,6 +196,6 @@ def initializeGui(iha):
     # x=12
     # altitude.insert(INSERT, f'Yükseklik: {x}')
     # altitude.pack()
-
+    root.bind_all('<Key>', key)
     #root.after(100, retrieve_telemetry(iha))
     root.mainloop()
