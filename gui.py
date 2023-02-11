@@ -24,8 +24,8 @@ yawRate = 15
 # print(f"Speed: {speed} m/s, Altitude: {altitude} m, Latitude: {latitude}, Longitude: {longitude}")
 def sendStatusTextWithDroneKit(iha, command):
     textToSend = "commandGCS:" + command
-    iha.message_factory.statustext_send(severity=1, text=textToSend)
-    iha.message_factory.statustext_send(severity=1, text="commandGCS: Hello Pixhawk".encode('utf-8'))
+    #iha.message_factory.statustext_send(severity=1, text=textToSend)
+    iha.message_factory.statustext_send(severity=1, text=(textToSend).encode('utf-8'))
     iha.flush()
 
 # def receiveStatusText():
@@ -108,7 +108,7 @@ def initializeGui(iha):
         # alan tarama kodunu çağır
         new_marker = map_widget.set_marker(coords[0], coords[1], text="new marker")
         # Send a status text message with severity info
-        text = f'commandGCS:alaniTara({coords[0]}, {coords[1]})'.encode('utf-8')
+        text = f'commandGCS:alanTaraKare({coords[0]}, {coords[1]})'.encode('utf-8')
         # iha.mav.statustext_send(mavutil.mavlink.MAV_SEVERITY_INFO, text)
 
     def koordinatListesiniAktiflestir():
@@ -191,20 +191,27 @@ def initializeGui(iha):
             iha.simple_takeoff(float(takeOffAltitude.get()))
             while True:
                 # Break and return from function just below target altitude.
-                if iha.location.global_relative_frame.alt >= float(takeOffAltitude.get()) * 0.95:
+                if iha.location.global_relative_frame.alt >= float(takeOffAltitude.get()) * 0.90:
                     break
                 time.sleep(1)
         else:
             informationTable.insert('', 'end', values=("kalkisaGec", "İha arm değil. Kalkışa geçilemedi.", "Sorun"))
             return
 
+    def durdur():
+        sendStatusTextWithDroneKit(iha, "BRAKE")
+        time.sleep(1)
+
+    def inisYap():
+        sendStatusTextWithDroneKit(iha, "LAND")
+        time.sleep(1)
 
     def eveDon():
-        iha.mode = VehicleMode("RTL")
+        sendStatusTextWithDroneKit(iha, "RTL")
         time.sleep(1)
 
     def alanTara(uzunluk, latitude, longitude):
-        sendStatusTextWithDroneKit(iha, "alanTara(" + str(uzunluk) + "," + str(latitude) + "," + str(longitude) + ")")
+        sendStatusTextWithDroneKit(iha, "alanTaraKare(," + str(uzunluk) + ",," + str(latitude) + ",," + str(longitude) + ",)")
 
     root = Tk()
     root.title('KTUUZAYQ1 Yer İstasyonu')
@@ -329,6 +336,12 @@ def initializeGui(iha):
     eveDonButton = Button(controller_1, height=1, width=30, text="Eve dön", command=eveDon)
     eveDonButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
 
+    durdurButton = Button(controller_1, height=1, width=30, text="Eve dön", command=durdur)
+    durdurButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
+
+    inisYapButton = Button(controller_1, height=1, width=30, text="Eve dön", command=eveDon)
+    inisYapButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
+
     latitude_entry = Entry(controller_1, width=15)
     latitude_entry.insert(0, latitude)
     latitude_entry.grid(row=2, column=0, padx=5, pady=5)
@@ -352,9 +365,9 @@ def initializeGui(iha):
     uzunluk_entry = Entry(controller_2, width=15)
     uzunluk_entry.insert(0, "Uzunluk")
     uzunluk_entry.grid(row=0, column=2, padx=5, pady=5)
-    goToButton = Button(controller_2, width=30, text="Alanı tara",
+    alanTaraButton = Button(controller_2, width=30, text="Alanı tara",
                         command=lambda: alanTara(float(latitude_entry.get()), float(longitude_entry.get()), float(uzunluk_entry.get())))
-    goToButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
+    alanTaraButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
 
     ####################### klavye kontrol ##########################3
     keyboardControl = Frame(root)
