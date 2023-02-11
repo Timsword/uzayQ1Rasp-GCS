@@ -13,9 +13,9 @@ def ihayaBaglan():
 def ihayaBaglanWithDronekit():
     # Connect to Pixhawk using the default connection string
     iha = connect('COM9', baud=57600, wait_ready=True)
-    print("Bağlantı stringi oluşturuldu.")
+    print("Bağlantı sağlandı.")
     return iha
 
 # ihayaBaglan()
 # ihayaBaglanWithDronekit()
-gui.initializeGui(2)
+gui.initializeGui(ihayaBaglanWithDronekit())
