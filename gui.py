@@ -25,18 +25,28 @@ yawRate = 15
 def sendStatusTextWithDroneKit(iha, command):
     textToSend = "commandGCS:" + command
     iha.message_factory.statustext_send(severity=1, text=textToSend)
+    iha.message_factory.statustext_send(severity=1, text="commandGCS: Hello Pixhawk".encode('utf-8'))
     iha.flush()
-    # ##############
-    # # Send a status text message with severity info
-    # text = "commandGCS:deneme".encode('utf-8')
-    # iha.mav.statustext_send(mavutil.mavlink.MAV_SEVERITY_INFO, text)
-    #
-    # # Wait a bit to give Pixhawk time to process the message
-    # time.sleep(1)
-    # while True:
-    #     msg = iha.recv_msg()
-    #     print(msg)
 
+# def receiveStatusText():
+#     from dronekit import connect, VehicleMode, LocationGlobalRelative
+#     import time
+#
+#     # Connect to Pixhawk using the default connection string
+#     vehicle = connect('/dev/serial0', baud=921600, wait_ready=True)
+#
+#     # Listen for `STATUSTEXT` messages
+#     @vehicle.on_message('STATUSTEXT')
+#     def handle_statustext_message(self, name, message):
+#         text = message.text
+#         if text.startswith("commandGCS:"):
+#             # Process the message
+#             print("Received command:", text)
+#             # You can add your own logic here to handle the received message
+#
+#     # Wait for messages
+#     while True:
+#         time.sleep(1)
 
 def initializeGui(iha):
     def retrieve_telemetry(iha):
@@ -48,17 +58,33 @@ def initializeGui(iha):
         #     altitude = msg.alt / 1000.0
         #     latitude = msg.lat * 1e-7
         #     longitude = msg.lon * 1e-7
+
+        if iha.armed:
+            armButton.config(image=on)
+            is_on = True
+        elif not iha.armed:
+            armButton.config(image=off)
+            is_on = False
+        else:
+            is_on = False
+
+
         speed = iha.groundspeed
         altitude = iha.location.global_relative_frame.alt
         latitude = iha.location.global_relative_frame.lat
         longitude = iha.location.global_relative_frame.lon
-        print(f"Speed: {speed} m/s, Altitude: {altitude} m, Latitude: {latitude}, Longitude: {longitude}")
+        #print(f"Speed: {speed} m/s, Altitude: {altitude} m, Latitude: {latitude}, Longitude: {longitude}")
         parametersTable.set("Altitude", 2, altitude)
         parametersTable.set("Speed", 2, speed)
         parametersTable.set("Enlem", 2, latitude)
         parametersTable.set("Boylam", 2, longitude)
 
-        root.after(100, lambda: retrieve_telemetry(iha))
+        map_widget.set_position(latitude, longitude)
+        map_widget.set_zoom(15)
+        position.delete()
+        position = map_widget.set_marker(latitude, longitude, text="KAYRA")
+
+        root.after(500, lambda: retrieve_telemetry(iha))
 
     def koordinataGit(coords):
         # pymavlink ile gitme emri verilecek
@@ -107,6 +133,7 @@ def initializeGui(iha):
     def koordinataGitController(lat_, lon_, alt_):
         coords = LocationGlobalRelative(lat_, lon_, alt_)
         iha.mode = VehicleMode("GUIDED")
+        time.sleep(1)
         iha.simple_goto(coords)
 
     def key(event):
@@ -133,28 +160,48 @@ def initializeGui(iha):
                 hizBelirle(iha, 0, 0, -yerHizi, 0)
 
     def armSwitch():
-        print(iha.armed)
         if iha.armed:
             iha.armed = False
             while iha.armed:
+                i = 0
+                if i == 10:
+                    informationTable.insert('', 'end', values=("armSwitch", "10 saniyenin ardından arm kapatılamadı.", "Sorun"))
+                    break
                 time.sleep(1)
-            armButton.config(image=off)
-            is_on = True
+
+            # armButton.config(image=off)
+            # is_on = False
         elif not iha.armed:
+            iha.mode = VehicleMode("GUIDED")
             iha.armed = True
             while not iha.armed:
+                i = 0
+                if i == 10:
+                    informationTable.insert('', 'end', values=("armSwitch", "10 saniyenin ardından arm yapılamadı.", "Sorun"))
+                    break
                 time.sleep(1)
-            armButton.config(image=on)
-            is_on = False
+            # armButton.config(image=on)
+            # is_on = True
         else:
-            is_on = False
+            # is_on = False
+            print("else")
 
     def kalkisaGec():
         if iha.armed:
-            iha.simple_takeoff(takeOffAltitude)
+            iha.simple_takeoff(float(takeOffAltitude.get()))
+            while True:
+                # Break and return from function just below target altitude.
+                if iha.location.global_relative_frame.alt >= float(takeOffAltitude.get()) * 0.95:
+                    break
+                time.sleep(1)
+        else:
+            informationTable.insert('', 'end', values=("kalkisaGec", "İha arm değil. Kalkışa geçilemedi.", "Sorun"))
+            return
+
 
     def eveDon():
         iha.mode = VehicleMode("RTL")
+        time.sleep(1)
 
     def alanTara(uzunluk, latitude, longitude):
         sendStatusTextWithDroneKit(iha, "alanTara(" + str(uzunluk) + "," + str(latitude) + "," + str(longitude) + ")")
@@ -205,7 +252,6 @@ def initializeGui(iha):
 
     is_on = iha.armed
 
-    speed = 0.0
     altitude = 0.0
     latitude = 0.0
     longitude = 0.0
@@ -237,7 +283,8 @@ def initializeGui(iha):
     # # marker_1.set_position(48.860381, 2.338594)  # change position
     # # marker_1.delete()
 
-    ################################# PARAMETRELER #############################
+
+    ################################# PARAMETRELER ##############################
     parameters = ttk.Notebook(root)
     parameters.grid(row=0, column=1)
 
@@ -274,7 +321,7 @@ def initializeGui(iha):
     armButton = Button(controller_1, image=off, bd=0, command=armSwitch)
     armButton.grid(row=0, column=0, padx=5, pady=5)
 
-    takeOffAltitude = Entry(controller_1, width=5)
+    takeOffAltitude = (Entry(controller_1, width=5))
     takeOffAltitude.grid(row=0, column=1, padx=5, pady=5)
     takeOffButton = Button(controller_1, height=1, width=10, text="Kalkışa geç", command=kalkisaGec)
     takeOffButton.grid(row=0, column=2, padx=5, pady=5)
@@ -292,7 +339,7 @@ def initializeGui(iha):
     altitude_entry.insert(0, altitude)
     altitude_entry.grid(row=2, column=2, padx=5, pady=5)
     goToButton = Button(controller_1, width=30, text="Koordinata git",
-                        command=lambda: koordinataGitController(latitude_entry, longitude_entry, altitude_entry))
+                        command=lambda: koordinataGitController(float(latitude_entry.get()), float(longitude_entry.get()), float(altitude_entry.get())))
     goToButton.grid(row=3, column=0, padx=5, pady=5, columnspan=3)
 
     ### alan tarama kontrolleri
@@ -306,7 +353,7 @@ def initializeGui(iha):
     uzunluk_entry.insert(0, "Uzunluk")
     uzunluk_entry.grid(row=0, column=2, padx=5, pady=5)
     goToButton = Button(controller_2, width=30, text="Alanı tara",
-                        command=lambda: alanTara(latitude_entry, longitude_entry, uzunluk_entry))
+                        command=lambda: alanTara(float(latitude_entry.get()), float(longitude_entry.get()), float(uzunluk_entry.get())))
     goToButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
 
     ####################### klavye kontrol ##########################3
@@ -328,6 +375,27 @@ def initializeGui(iha):
     upButton.grid(row=0, column=3, padx=5, pady=5)
     downButton = Button(keyboardControl, image=downImg, bd=0)
     downButton.grid(row=1, column=3, padx=5, pady=5)
+
+    ################################# INFORMATION ###############################
+    information = ttk.Notebook(root)
+    information.grid(row=0, column=3, rowspan=2)
+
+    information_1 = Frame(information, width=330, height=600)
+    information.add(information_1, text="Bilgi")
+
+    informationTable = ttk.Treeview(information_1, columns=(1, 2,3), selectmode="browse", height="8")
+    informationTable['show'] = 'headings'
+
+    informationTable.pack()
+    informationTable.heading(1, text="Kaynak")
+    informationTable.heading(2, text="Mesaj")
+    informationTable.heading(3, text="Tür")
+    informationTable.column(1, width=50)
+    informationTable.column(2, width=200)
+    informationTable.column(3, width=50)
+
+    informationTable.insert('', 'end', values=("Root", "Bağlantı sağlandı", "Bilgi"))
+
 
     # tv.heading(3, text="Parameter")
 
