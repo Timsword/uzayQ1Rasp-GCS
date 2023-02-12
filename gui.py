@@ -20,6 +20,8 @@ yerHizi = 1
 yawRate = 15
 
 
+
+
 # Print the values
 # print(f"Speed: {speed} m/s, Altitude: {altitude} m, Latitude: {latitude}, Longitude: {longitude}")
 def sendStatusTextWithDroneKit(iha, command):
@@ -99,23 +101,32 @@ def initializeGui(iha):
         koordinataGitController(coords[0],coords[1],10) #uzunluk değişebilir
 
     def koordinatiListeyeEkle(coords):
+        rotaIterasyon = 1
         # adres listeye eklenecek
         new_marker = map_widget.set_marker(coords[0], coords[1], text="new marker")
         coordList.append(coords)
         komut.add(
             Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0,
                     0, 0, 0, 0, coords[0], coords[1], 10))
+        time.sleep(1)
+        rotaTable.insert('', 'end', values=(rotaIterasyon, coords[0], coords[1]))
+        rotaIterasyon = 1+ rotaIterasyon
 
     def alanTaraController(coords):
         # alan tarama kodunu çağır
         new_marker = map_widget.set_marker(coords[0], coords[1], text="new marker")
         alanTara(coords[0], coords[1],10)
 
-    def koordinatListesiniAktiflestir():
+    def koordinatListesiniAktiflestir(iha):
         komut.upload()
         iha.mode = VehicleMode("AUTO")
         time.sleep(1)
         komut.clear()
+        time.sleep(1)
+        komut = iha.commands
+        coordList = []
+        #rotaIterasyon = 1
+
 
     def hizBelirle(iha, vx, vy, vz, yaw):
         msg = iha.message_factory.set_position_target_local_ned_encode(
@@ -307,7 +318,7 @@ def initializeGui(iha):
     parametersTable.heading(1, text="Parameter name")
     parametersTable.heading(2, text="Value")
     parametersTable.column(1, width=130)
-    parametersTable.column(2, width=70, anchor=CENTER)
+    parametersTable.column(2, width=200, anchor=CENTER)
 
     parametersTable.insert('', 'end', iid="Altitude", values=("İrtifa", 0))
     parametersTable.insert('', 'end', iid="Speed", values=("Hız", 0))
@@ -319,9 +330,12 @@ def initializeGui(iha):
 
     controller_1 = Frame(controller, width=200, height=300)
     controller_2 = Frame(controller, width=200, height=300)
+    controller_3 = Frame(controller, width=200, height=300)
+
     # tabs
     controller.add(controller_1, text="Genel kontrol")
     controller.add(controller_2, text="Tarama kontrol")
+    controller.add(controller_3, text="Rota kontrol")
 
     ### genel kontroller
     armButton = Button(controller_1, image=off, bd=0, command=armSwitch)
@@ -336,23 +350,26 @@ def initializeGui(iha):
     eveDonButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
 
     durdurButton = Button(controller_1, height=1, width=30, text="Durdur", command=durdur)
-    durdurButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
+    durdurButton.grid(row=2, column=0, padx=5, pady=5, columnspan=3)
 
     inisYapButton = Button(controller_1, height=1, width=30, text="İniş yap", command=inisYap())
-    inisYapButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
+    inisYapButton.grid(row=3, column=0, padx=5, pady=5, columnspan=3)
 
     latitude_entry = Entry(controller_1, width=15)
     latitude_entry.insert(0, latitude)
-    latitude_entry.grid(row=2, column=0, padx=5, pady=5)
+    latitude_entry.grid(row=4, column=0, padx=5, pady=5)
     longitude_entry = Entry(controller_1, width=15)
     longitude_entry.insert(0, longitude)
-    longitude_entry.grid(row=2, column=1, padx=5, pady=5)
+    longitude_entry.grid(row=4, column=1, padx=5, pady=5)
     altitude_entry = Entry(controller_1, width=15)
     altitude_entry.insert(0, altitude)
-    altitude_entry.grid(row=2, column=2, padx=5, pady=5)
+    altitude_entry.grid(row=4, column=2, padx=5, pady=5)
     goToButton = Button(controller_1, width=30, text="Koordinata git",
                         command=lambda: koordinataGitController(float(latitude_entry.get()), float(longitude_entry.get()), float(altitude_entry.get())))
-    goToButton.grid(row=3, column=0, padx=5, pady=5, columnspan=3)
+    goToButton.grid(row=5, column=0, padx=5, pady=5, columnspan=3)
+
+
+
 
     ### alan tarama kontrolleri
     latitude_entry2 = Entry(controller_2, width=15)
@@ -367,6 +384,24 @@ def initializeGui(iha):
     alanTaraButton = Button(controller_2, width=30, text="Alanı tara",
                         command=lambda: alanTara(float(latitude_entry.get()), float(longitude_entry.get()), float(uzunluk_entry.get())))
     alanTaraButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
+
+    ### rota kontrol
+    rota = ttk.Notebook(controller_3)
+    rota.grid(row=0, column=0)  # , rowspan=2
+
+    rotaTable = ttk.Treeview(controller_3, columns=(1, 2, 3), selectmode="browse", height="8")
+    rotaTable['show'] = 'headings'
+
+    rotaTable.grid(row=0, column=0, padx=5, pady=5)
+    rotaTable.heading(1, text="Sıra")
+    rotaTable.heading(2, text="Enlem")
+    rotaTable.heading(3, text="Boylam")
+    rotaTable.column(1, width=20)
+    rotaTable.column(2, width=100)
+    rotaTable.column(3, width=100)
+
+    rotaButton = Button(controller_3, height=1, width=30, text="Rotayı başlat", command=lambda:koordinatListesiniAktiflestir(iha))
+    rotaButton.grid(row=1, column=0, padx=5, pady=5)
 
     ####################### klavye kontrol ##########################3
     keyboardControl = Frame(root)
@@ -392,13 +427,16 @@ def initializeGui(iha):
     logoFrame = Frame(root, width=200, height=200)
     logoFrame.grid(row=0, column=3)
 
-    logoImg = ImageTk.PhotoImage(Image.open("assets/logo.jpg"))
+    logoImg = Image.open("assets/logo.jpg")
+    logoImg = img.resize((200,200), Image.ANTIALIAS)
+    logoImg = ImageTk.PhotoImage(resized_image)
+
     logoLabel = Label(logoFrame, image=logoImg)
-    logoLabel.grid(row=0, grid=0)
+    logoLabel.grid(row=0, column=0)
 
     ################################# INFORMATION ###############################
     information = ttk.Notebook(root)
-    information.grid(row=0, column=3)#, rowspan=2
+    information.grid(row=1, column=3)#, rowspan=2
 
     information_1 = Frame(information, width=330, height=600)
     information.add(information_1, text="Bilgi")
