@@ -81,7 +81,7 @@ def initializeGui(iha):
 
         map_widget.set_position(latitude, longitude)
         map_widget.set_zoom(15)
-        position.delete()
+        #position.delete()
         position = map_widget.set_marker(latitude, longitude, text="KAYRA")
 
         root.after(500, lambda: retrieve_telemetry(iha))
@@ -336,10 +336,10 @@ def initializeGui(iha):
     eveDonButton = Button(controller_1, height=1, width=30, text="Eve dön", command=eveDon)
     eveDonButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
 
-    durdurButton = Button(controller_1, height=1, width=30, text="Eve dön", command=durdur)
+    durdurButton = Button(controller_1, height=1, width=30, text="Durdur", command=durdur)
     durdurButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
 
-    inisYapButton = Button(controller_1, height=1, width=30, text="Eve dön", command=eveDon)
+    inisYapButton = Button(controller_1, height=1, width=30, text="İniş yap", command=inisYap())
     inisYapButton.grid(row=1, column=0, padx=5, pady=5, columnspan=3)
 
     latitude_entry = Entry(controller_1, width=15)
@@ -389,9 +389,17 @@ def initializeGui(iha):
     downButton = Button(keyboardControl, image=downImg, bd=0)
     downButton.grid(row=1, column=3, padx=5, pady=5)
 
+    ################################# LOGO ###############################
+    logoFrame = Frame(root, width=200, height=200)
+    logoFrame.grid(row=0, column=3)
+
+    logoImg = ImageTk.PhotoImage(Image.open("assets/logo.jpg"))
+    logoLabel = Label(logoFrame, image=logoImg)
+    logoLabel.grid(row=0, grid=0)
+
     ################################# INFORMATION ###############################
     information = ttk.Notebook(root)
-    information.grid(row=0, column=3, rowspan=2)
+    information.grid(row=0, column=3)#, rowspan=2
 
     information_1 = Frame(information, width=330, height=600)
     information.add(information_1, text="Bilgi")
