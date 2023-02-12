@@ -49,7 +49,7 @@ def sendStatusTextWithDroneKit(iha, command):
 #         time.sleep(1)
 
 def initializeGui(iha):
-    def retrieve_telemetry(iha):
+    def retrieve_telemetry(iha, position):
         # ####### mavlink ##########
         # msg = iha.recv_msg()
         #
@@ -82,6 +82,7 @@ def initializeGui(iha):
         map_widget.set_position(latitude, longitude)
         map_widget.set_zoom(15)
         #position.delete()
+        #map_widget.delete(position)
         position = map_widget.set_marker(latitude, longitude, text="KAYRA")
 
         root.after(500, lambda: retrieve_telemetry(iha))
@@ -89,12 +90,13 @@ def initializeGui(iha):
     def koordinataGit(coords):
         # pymavlink ile gitme emri verilecek
         new_marker = map_widget.set_marker(coords[0], coords[1], text="new marker")
-        komut.clear()
-        komut.add(
-            Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0,
-                    0, 0, 0, 0, coords[0], coords[1], 10))
-        komut.upload()
-        iha.mode = VehicleMode("AUTO")
+        # komut.clear()
+        # komut.add(
+        #     Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0,
+        #             0, 0, 0, 0, coords[0], coords[1], 10))
+        # komut.upload()
+        # iha.mode = VehicleMode("AUTO")
+        koordinataGitController(coords[0],coords[1],10) #uzunluk değişebilir
 
     def koordinatiListeyeEkle(coords):
         # adres listeye eklenecek
@@ -104,12 +106,10 @@ def initializeGui(iha):
             Command(0, 0, 0, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0,
                     0, 0, 0, 0, coords[0], coords[1], 10))
 
-    def alaniTara(coords):
+    def alanTaraController(coords):
         # alan tarama kodunu çağır
         new_marker = map_widget.set_marker(coords[0], coords[1], text="new marker")
-        # Send a status text message with severity info
-        text = f'commandGCS:alanTaraKare({coords[0]}, {coords[1]})'.encode('utf-8')
-        # iha.mav.statustext_send(mavutil.mavlink.MAV_SEVERITY_INFO, text)
+        alanTara(coords[0], coords[1],10)
 
     def koordinatListesiniAktiflestir():
         komut.upload()
@@ -122,7 +122,7 @@ def initializeGui(iha):
             0,
             0, 0,
             mavutil.mavlink.MAV_FRAME_BODY_NED,
-            0b0000111111000111,  # -- BITMASK -> Consider only the velocities
+            0b0000011111000111,  # -- BITMASK -> Consider only the velocities
             0, 0, 0,  # -- POSITION
             vx, vy, vz,  # -- VELOCITY
             0, 0, 0,  # -- ACCELERATIONS
@@ -139,8 +139,7 @@ def initializeGui(iha):
     def key(event):
         if event.char == event.keysym:  # -- standard keys
             if event.keysym == 'r':
-                print("r pressed >> Set the vehicle to RTL")
-                iha.mode = VehicleMode("RTL")
+                eveDon()
             elif event.keysym == 'w':  # ileri
                 hizBelirle(iha, yerHizi, 0, 0, 0)
             elif event.keysym == 's':  # geri
@@ -155,9 +154,9 @@ def initializeGui(iha):
                 hizBelirle(iha, 0, 0, 0, yawRate)
         else:  # -- non standard keys
             if event.keysym == 'Up':  # yüksel
-                hizBelirle(iha, 0, 0, yerHizi, 0)
-            elif event.keysym == 'Down':  # alçal
                 hizBelirle(iha, 0, 0, -yerHizi, 0)
+            elif event.keysym == 'Down':  # alçal
+                hizBelirle(iha, 0, 0, yerHizi, 0)
 
     def armSwitch():
         if iha.armed:
@@ -210,8 +209,8 @@ def initializeGui(iha):
         sendStatusTextWithDroneKit(iha, "RTL")
         time.sleep(1)
 
-    def alanTara(uzunluk, latitude, longitude):
-        sendStatusTextWithDroneKit(iha, "alanTaraKare(," + str(uzunluk) + ",," + str(latitude) + ",," + str(longitude) + ",)")
+    def alanTara(latitude, longitude, uzunluk):
+        sendStatusTextWithDroneKit(iha, "alanTaraKare(," + str(latitude) + ",," + str(longitude) + ",," + str(uzunluk) + ",)")
 
     root = Tk()
     root.title('KTUUZAYQ1 Yer İstasyonu')
@@ -280,7 +279,7 @@ def initializeGui(iha):
                                             command=koordinatiListeyeEkle,
                                             pass_coords=True)
     map_widget.add_right_click_menu_command(label="Alanı tara",
-                                            command=alaniTara,
+                                            command=alanTaraController,
                                             pass_coords=True)
 
     # # set current widget position by address
@@ -427,5 +426,5 @@ def initializeGui(iha):
 
     root.bind_all('<Key>', key)
     # root.after(100, retrieve_telemetry(iha))
-    root.after(100, lambda: retrieve_telemetry(iha))
+    root.after(100, lambda: retrieve_telemetry(iha, position))
     root.mainloop()
