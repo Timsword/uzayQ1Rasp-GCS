@@ -268,7 +268,7 @@ def initializeGui(iha):
 
     # set current widget position and zoom
     map_widget.set_position(latitude, longitude)
-    map_widget.set_zoom(15)
+    map_widget.set_zoom(20)
 
     position = map_widget.set_marker(latitude, longitude, text="KAYRA")
 
